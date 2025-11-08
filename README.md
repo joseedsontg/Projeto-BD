@@ -79,7 +79,6 @@ Criar **3 views** utilizando `JOIN` e `GROUP BY`.
 
 ## Constraints
 - **Sexo:** Deve ser `'m'`, `'f'` ou `'o'`.  
-- **Cargo:** Deve ser `'vendedor'`, `'gerente'` ou `'CEO'`.  
 
 ---
 
