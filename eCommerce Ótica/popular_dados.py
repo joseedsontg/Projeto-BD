@@ -22,7 +22,7 @@ def inserir_dados():
         )
         cursor = cnx.cursor()
 
-        print("ℹ️  Conectado! Iniciando a inserção de dados (Esquema Final)...")
+        print("Conectado! Iniciando a inserção de dados (Esquema Final)...")
 
         # --- 1. Inserir Vendedores (5) ---
         vendedores = []
@@ -39,7 +39,7 @@ def inserir_dados():
         VALUES (%s, %s, %s, %s)
         """
         cursor.executemany(sql_vendedores, vendedores)
-        print(f"✅ {cursor.rowcount} vendedores inseridos.")
+        print(f"{cursor.rowcount} vendedores inseridos.")
 
         # --- 2. Inserir Transportadoras (3) ---
         transportadoras = [
@@ -49,7 +49,7 @@ def inserir_dados():
         ]
         sql_transportadoras = "INSERT INTO Transportadora (nome, cidade) VALUES (%s, %s)"
         cursor.executemany(sql_transportadoras, transportadoras)
-        print(f"✅ {cursor.rowcount} transportadoras inseridas.")
+        print(f"{cursor.rowcount} transportadoras inseridas.")
 
         # --- 3. Inserir Clientes (100) ---
         clientes = []
@@ -63,7 +63,7 @@ def inserir_dados():
         INSERT INTO Cliente (nome, sexo, data_de_nascimento) VALUES (%s, %s, %s)
         """
         cursor.executemany(sql_clientes, clientes)
-        print(f"✅ {cursor.rowcount} clientes inseridos.")
+        print(f"{cursor.rowcount} clientes inseridos.")
 
         # --- 4. Inserir Produtos (20) ---
         produtos = []
@@ -80,19 +80,19 @@ def inserir_dados():
         VALUES (%s, %s, %s, %s, %s)
         """
         cursor.executemany(sql_produtos, produtos)
-        print(f"✅ {cursor.rowcount} produtos inseridos.")
+        print(f"{cursor.rowcount} produtos inseridos.")
 
         cnx.commit()
-        print("\n🎉 (Revisão Final) Todos os dados iniciais foram inseridos com sucesso!")
+        print("\n(Revisão Final) Todos os dados iniciais foram inseridos com sucesso!")
 
     except mysql.connector.Error as err:
         if err.errno == errorcode.ER_ACCESS_DENIED_ERROR:
-            print("❌ Erro: Verifique o nome de usuário ou senha no config.py")
+            print("Erro: Verifique o nome de usuário ou senha no config.py")
         elif err.errno == errorcode.ER_BAD_DB_ERROR:
-            print(f"❌ Erro: Banco de dados '{NOME_BANCO}' não existe.")
+            print(f"Erro: Banco de dados '{NOME_BANCO}' não existe.")
             print("Execute o script '1_criar_banco.py' primeiro.")
         else:
-            print(f"❌ Erro ao inserir dados: {err}")
+            print(f"Erro ao inserir dados: {err}")
     finally:
         if cursor: cursor.close()
         if cnx: cnx.close()

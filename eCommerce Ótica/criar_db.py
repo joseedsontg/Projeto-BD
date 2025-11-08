@@ -151,33 +151,33 @@ def criar_banco():
         cnx = mysql.connector.connect(host=HOST, user=USUARIO, password=SENHA)
         cursor = cnx.cursor()
         cursor.execute(SQL_CREATE_DB)
-        print(f"✅ Banco de dados '{NOME_BANCO}' verificado/criado.")
+        print(f"Banco de dados '{NOME_BANCO}' verificado/criado.")
         cursor.close()
         cnx.close()
 
         cnx = mysql.connector.connect(host=HOST, user=USUARIO, password=SENHA, database=NOME_BANCO)
         cursor = cnx.cursor()
         
-        print(f"ℹ️  Iniciando criação de Tabelas e Funções no '{NOME_BANCO}'...")
+        print(f"ℹIniciando criação de Tabelas e Funções no '{NOME_BANCO}'...")
         
 
         for comando_sql in SQL_COMANDOS_ESTRUTURA:
             cursor.execute(comando_sql)
             
-        print("✅ (Revisão 5) Todas as Tabelas e Funções foram criadas com sucesso!")
+        print("(Revisão 5) Todas as Tabelas e Funções foram criadas com sucesso!")
 
     except mysql.connector.Error as err:
         if err.errno == 1418:
             print("\n" + "="*50)
-            print("❌ ERRO DE PERMISSÃO (1418):")
+            print("ERRO DE PERMISSÃO (1418):")
             print("O MySQL não permitiu que o Python criasse a função.")
             print("Execute isto no seu MySQL Workbench (como root):")
             print("SET GLOBAL log_bin_trust_function_creators = 1;")
             print("="*50 + "\n")
         elif err.errno == errorcode.ER_ACCESS_DENIED_ERROR:
-            print("❌ Erro: Verifique o nome de usuário ou senha.")
+            print("Erro: Verifique o nome de usuário ou senha.")
         else:
-            print(f"❌ Erro ao executar o SQL: {err}")
+            print(f"Erro ao executar o SQL: {err}")
     finally:
         if cursor: cursor.close()
         if cnx: cnx.close()
