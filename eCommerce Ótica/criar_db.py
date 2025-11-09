@@ -184,6 +184,15 @@ SQL_COMANDOS_ESTRUTURA = [
 
     #Procedimentos
 
+    "DROP PROCEDURE IF EXISTS Reajuste",
+    """
+    CREATE PROCEDURE Reajuste(IN p_percentual FLOAT)
+    BEGIN
+        UPDATE Vendedor
+        SET salario = salario + (salario * (p_percentual / 100));
+    END
+    """
+
     "DROP PROCEDURE IF EXISTS Sorteio",
     """
     CREATE PROCEDURE Sorteio()
@@ -306,7 +315,6 @@ SQL_COMANDOS_ESTRUTURA = [
         ORDER BY Qtd_no_Mes DESC;
     END
     """
-
     
 ]
 
