@@ -129,3 +129,38 @@ BEGIN
     END IF;
     RETURN v_total_arrecadado;
 END);
+
+-- VIEWS
+
+-- 1 View: Total gasto por cliente
+CREATE OR REPLACE VIEW vw_total_gasto_por_cliente AS
+SELECT 
+    C.id AS id_cliente,
+    C.nome AS nome_cliente,
+    SUM(VP.quantidade * VP.valor_unitario) AS total_gasto
+FROM Cliente C
+JOIN Venda V ON C.id = V.id_cliente
+JOIN Venda_Produto VP ON V.id = VP.id_venda
+GROUP BY C.id, C.nome;
+
+-- 2 View: Total vendido por vendedor
+CREATE OR REPLACE VIEW vw_total_vendido_por_vendedor AS
+SELECT 
+    Vd.id AS id_vendedor,
+    Vd.nome AS nome_vendedor,
+    SUM(VP.quantidade * VP.valor_unitario) AS total_vendido
+FROM Vendedor Vd
+JOIN Venda Ve ON Vd.id = Ve.id_vendedor
+JOIN Venda_Produto VP ON Ve.id = VP.id_venda
+GROUP BY Vd.id, Vd.nome;
+
+-- 2 View: Produtos mais vendidos
+CREATE OR REPLACE VIEW vw_produtos_mais_vendidos AS
+SELECT 
+    P.id AS id_produto,
+    P.nome AS nome_produto,
+    SUM(VP.quantidade) AS total_vendido
+FROM Produto P
+JOIN Venda_Produto VP ON P.id = VP.id_produto
+GROUP BY P.id, P.nome
+ORDER BY total_vendido DESC;

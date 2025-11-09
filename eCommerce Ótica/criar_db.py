@@ -10,8 +10,7 @@ CREATE DATABASE IF NOT EXISTS {NOME_BANCO}
 CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 """
 
-#SQL Parte 2: Definições das Funções
-
+# SQL Parte 2: Definições das Funções
 SQL_FUNCTION_CALCULA_IDADE = """
 CREATE FUNCTION `Calcula_idade`(p_id_cliente INT)
 RETURNS INT
@@ -38,7 +37,6 @@ DETERMINISTIC
 READS SQL DATA
 BEGIN
     DECLARE v_valor_total_fretes FLOAT DEFAULT 0.0;
-    -- CORREÇÃO: Busca na tabela 'Venda'
     SELECT SUM(valor_frete) INTO v_valor_total_fretes
     FROM Venda 
     WHERE endereco_destino = p_endereco_destino;
@@ -68,9 +66,12 @@ BEGIN
 END
 """
 
-# (Tabelas + Funções)
+# ============================
+# Estrutura do Banco
+# ============================
+
 SQL_COMANDOS_ESTRUTURA = [
-    
+    # Tabelas
     """
     CREATE TABLE IF NOT EXISTS Cliente (
       id INT AUTO_INCREMENT PRIMARY KEY, nome VARCHAR(40) NOT NULL, sexo VARCHAR(1),
@@ -128,26 +129,70 @@ SQL_COMANDOS_ESTRUTURA = [
       FOREIGN KEY (id_produto) REFERENCES Produto(id)
     );
     """,
-    
-    
+
+    # Funções
     "DROP FUNCTION IF EXISTS Calcula_idade",
     SQL_FUNCTION_CALCULA_IDADE,
-    
+
     "DROP FUNCTION IF EXISTS Soma_fretes",
     SQL_FUNCTION_SOMA_FRETES,
-    
+
     "DROP FUNCTION IF EXISTS Arrecadado",
-    SQL_FUNCTION_ARRECADADO
+    SQL_FUNCTION_ARRECADADO,
+
+    # ================================
+    # VIEWS
+    # ================================
+    "DROP VIEW IF EXISTS vw_total_gasto_por_cliente",
+    """
+    CREATE VIEW vw_total_gasto_por_cliente AS
+    SELECT 
+        C.id AS id_cliente,
+        C.nome AS nome_cliente,
+        SUM(VP.quantidade * VP.valor_unitario) AS total_gasto
+    FROM Cliente C
+    JOIN Venda V ON C.id = V.id_cliente
+    JOIN Venda_Produto VP ON V.id = VP.id_venda
+    GROUP BY C.id, C.nome;
+    """,
+
+    "DROP VIEW IF EXISTS vw_total_vendido_por_vendedor",
+    """
+    CREATE VIEW vw_total_vendido_por_vendedor AS
+    SELECT 
+        Vd.id AS id_vendedor,
+        Vd.nome AS nome_vendedor,
+        SUM(VP.quantidade * VP.valor_unitario) AS total_vendido
+    FROM Vendedor Vd
+    JOIN Venda Ve ON Vd.id = Ve.id_vendedor
+    JOIN Venda_Produto VP ON Ve.id = VP.id_venda
+    GROUP BY Vd.id, Vd.nome;
+    """,
+
+    "DROP VIEW IF EXISTS vw_produtos_mais_vendidos",
+    """
+    CREATE VIEW vw_produtos_mais_vendidos AS
+    SELECT 
+        P.id AS id_produto,
+        P.nome AS nome_produto,
+        SUM(VP.quantidade) AS total_vendido
+    FROM Produto P
+    JOIN Venda_Produto VP ON P.id = VP.id_produto
+    GROUP BY P.id, P.nome
+    ORDER BY total_vendido DESC;
+    """
 ]
 
+# ============================
+# Função principal
+# ============================
 
 def criar_banco():
     cnx = None
     cursor = None
-  
     
     try:
-
+        # Cria o banco
         cnx = mysql.connector.connect(host=HOST, user=USUARIO, password=SENHA)
         cursor = cnx.cursor()
         cursor.execute(SQL_CREATE_DB)
@@ -155,16 +200,16 @@ def criar_banco():
         cursor.close()
         cnx.close()
 
+        # Conecta ao banco recém-criado
         cnx = mysql.connector.connect(host=HOST, user=USUARIO, password=SENHA, database=NOME_BANCO)
         cursor = cnx.cursor()
-        
-        print(f"ℹIniciando criação de Tabelas e Funções no '{NOME_BANCO}'...")
-        
+
+        print(f"ℹ️ Iniciando criação de Tabelas, Funções e Views no '{NOME_BANCO}'...")
 
         for comando_sql in SQL_COMANDOS_ESTRUTURA:
             cursor.execute(comando_sql)
-            
-        print("(Revisão 5) Todas as Tabelas e Funções foram criadas com sucesso!")
+
+        print("✅ Todas as Tabelas, Funções e Views foram criadas com sucesso!")
 
     except mysql.connector.Error as err:
         if err.errno == 1418:
