@@ -135,6 +135,8 @@ END);
 -- TRIGGERS
 
 -- Trigger para calcular o bônus do vendedor 
+DELIMITER $$
+
 CREATE TRIGGER Calcula_Bonus_Vendedor
 AFTER UPDATE ON Vendedor
 FOR EACH ROW
@@ -164,7 +166,11 @@ BEGIN
     END IF;
 END$$
 
+DELIMITER ;
+
 -- Trigger para adicionar o cliente na tabela de clientes especiais e adicionar 2% no valor de cashback
+DELIMITER $$
+
 CREATE TRIGGER Gera_Cashback_Cliente
 AFTER UPDATE ON Cliente
 FOR EACH ROW
@@ -194,7 +200,11 @@ BEGIN
     END IF;
 END$$
 
+DELIMITER ;
+
   -- Trigger para remover o cliente da tabela de clientes especiais caso o valor do cashback for zero
+DELIMITER $$
+
 CREATE TRIGGER Remove_Cliente_Cashback_Zero
 AFTER UPDATE ON Cliente_Especial
 FOR EACH ROW
@@ -207,6 +217,8 @@ BEGIN
         
     END IF;
 END$$
+
+DELIMITER ;
 
 -- VIEWS
 
