@@ -4,15 +4,19 @@ from config import HOST, USUARIO, SENHA
 
 NOME_BANCO = "ecommerce_oculos_db"
 
-# SQL Parte 1: Apenas para criar o banco de dados
 SQL_CREATE_DB = f"""
 CREATE DATABASE IF NOT EXISTS {NOME_BANCO} 
 CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 """
 
-# SQL Parte 2: Definições das Funções
+# ============================
+# FUNCTIONS
+# ============================
+
 SQL_FUNCTION_CALCULA_IDADE = """
-CREATE FUNCTION `Calcula_idade`(p_id_cliente INT)
+DROP FUNCTION IF EXISTS Calcula_idade;
+DELIMITER $$
+CREATE FUNCTION Calcula_idade(p_id_cliente INT)
 RETURNS INT
 DETERMINISTIC
 READS SQL DATA
@@ -27,11 +31,14 @@ BEGIN
     END IF;
     SET v_idade = TIMESTAMPDIFF(YEAR, v_data_nascimento, CURDATE());
     RETURN v_idade;
-END
+END$$
+DELIMITER ;
 """
 
 SQL_FUNCTION_SOMA_FRETES = """
-CREATE FUNCTION `Soma_fretes`(p_endereco_destino VARCHAR(100))
+DROP FUNCTION IF EXISTS Soma_fretes;
+DELIMITER $$
+CREATE FUNCTION Soma_fretes(p_endereco_destino VARCHAR(100))
 RETURNS FLOAT
 DETERMINISTIC
 READS SQL DATA
@@ -44,11 +51,14 @@ BEGIN
         RETURN 0.0;
     END IF;
     RETURN v_valor_total_fretes;
-END
+END$$
+DELIMITER ;
 """
 
 SQL_FUNCTION_ARRECADADO = """
-CREATE FUNCTION `Arrecadado`(p_data DATE, p_id_vendedor INT)
+DROP FUNCTION IF EXISTS Arrecadado;
+DELIMITER $$
+CREATE FUNCTION Arrecadado(p_data DATE, p_id_vendedor INT)
 RETURNS FLOAT
 DETERMINISTIC
 READS SQL DATA
@@ -63,7 +73,103 @@ BEGIN
         RETURN 0.0;
     END IF;
     RETURN v_total_arrecadado;
-END
+END$$
+DELIMITER ;
+"""
+
+# ============================
+# TRIGGERS
+# ============================
+
+SQL_TRIGGER_VENDEDOR_BONUS = """
+DROP TRIGGER IF EXISTS Calcula_Bonus_Vendedor;
+DELIMITER $$
+CREATE TRIGGER Calcula_Bonus_Vendedor
+AFTER UPDATE ON Vendedor
+FOR EACH ROW
+BEGIN
+    DECLARE valor_bonus FLOAT;
+    DECLARE vendas_aumento FLOAT;
+    DECLARE bonus_acumulado_total FLOAT;
+    DECLARE mensagem VARCHAR(500);
+
+    IF NEW.valor_vendas > 1000.00 THEN
+        SET vendas_aumento = NEW.valor_vendas - OLD.valor_vendas;
+        SET valor_bonus = vendas_aumento * 0.05;
+
+        INSERT INTO Funcionario_Especial (id_vendedor, bonus_total_acumulado)
+        VALUES (NEW.id, valor_bonus)
+        ON DUPLICATE KEY UPDATE 
+            bonus_total_acumulado = bonus_total_acumulado + valor_bonus;
+            
+        SELECT bonus_total_acumulado INTO bonus_acumulado_total
+        FROM Funcionario_Especial WHERE id_vendedor = NEW.id;
+        
+        -- CORREÇÃO: Concatenação movida para variável para evitar erro de sintaxe
+        SET mensagem = CONCAT(
+            'ALERTA DE BÔNUS: Vendedor ', NEW.id, 
+            ' recebeu um bônus de R$ ', FORMAT(valor_bonus, 2), 
+            '. O total de bônus salarial acumulado a custear é de R$ ', 
+            FORMAT(bonus_acumulado_total, 2), '.'
+        );
+
+        SIGNAL SQLSTATE '01000' SET MESSAGE_TEXT = mensagem;
+    END IF;
+END$$
+DELIMITER ;
+"""
+
+SQL_TRIGGER_CLIENTE_CASHBACK = """
+DROP TRIGGER IF EXISTS Gera_Cashback_Cliente;
+DELIMITER $$
+CREATE TRIGGER Gera_Cashback_Cliente
+AFTER UPDATE ON Cliente
+FOR EACH ROW
+BEGIN
+    DECLARE valor_cashback FLOAT;
+    DECLARE gasto_aumento FLOAT;
+    DECLARE cashback_acumulado_total FLOAT;
+    DECLARE mensagem VARCHAR(500);
+
+    IF NEW.valor_gasto > 500.00 THEN
+        SET gasto_aumento = NEW.valor_gasto - OLD.valor_gasto;
+        SET valor_cashback = gasto_aumento * 0.02;
+
+        INSERT INTO Cliente_Especial (id_cliente, cashback)
+        VALUES (NEW.id, valor_cashback)
+        ON DUPLICATE KEY UPDATE 
+            cashback = cashback + valor_cashback;
+            
+        SELECT cashback INTO cashback_acumulado_total
+        FROM Cliente_Especial WHERE id_cliente = NEW.id;
+
+        -- CORREÇÃO: Concatenação movida para variável para evitar erro de sintaxe
+        SET mensagem = CONCAT(
+            'ALERTA DE CASHBACK: Cliente ', NEW.id, 
+            ' recebeu um cashback de R$ ', FORMAT(valor_cashback, 2), 
+            '. O valor total de cashback a custear é de R$ ', 
+            FORMAT(cashback_acumulado_total, 2), '.'
+        );
+
+        SIGNAL SQLSTATE '01000' SET MESSAGE_TEXT = mensagem;
+    END IF;
+END$$
+DELIMITER ;
+"""
+
+SQL_TRIGGER_REMOVE_CLIENTE = """
+DROP TRIGGER IF EXISTS Remove_Cliente_Cashback_Zero;
+DELIMITER $$
+CREATE TRIGGER Remove_Cliente_Cashback_Zero
+AFTER UPDATE ON Cliente_Especial
+FOR EACH ROW
+BEGIN
+    IF NEW.cashback <= 0.00 THEN
+        DELETE FROM Cliente_Especial
+        WHERE id_cliente = NEW.id_cliente;
+    END IF;
+END$$
+DELIMITER ;
 """
 
 # ============================
@@ -129,21 +235,21 @@ SQL_COMANDOS_ESTRUTURA = [
       FOREIGN KEY (id_produto) REFERENCES Produto(id)
     );
     """,
-
-    # Funções
-    "DROP FUNCTION IF EXISTS Calcula_idade",
+    
+    # Executa as Functions 
     SQL_FUNCTION_CALCULA_IDADE,
-
-    "DROP FUNCTION IF EXISTS Soma_fretes",
     SQL_FUNCTION_SOMA_FRETES,
-
-    "DROP FUNCTION IF EXISTS Arrecadado",
     SQL_FUNCTION_ARRECADADO,
+    
+    # Executa os Triggers 
+    SQL_TRIGGER_VENDEDOR_BONUS,
+    SQL_TRIGGER_CLIENTE_CASHBACK,
+    SQL_TRIGGER_REMOVE_CLIENTE,
 
     # ================================
     # VIEWS
     # ================================
-    "DROP VIEW IF EXISTS vw_total_gasto_por_cliente",
+    "DROP VIEW IF EXISTS vw_total_gasto_por_cliente;",
     """
     CREATE VIEW vw_total_gasto_por_cliente AS
     SELECT 
@@ -156,7 +262,7 @@ SQL_COMANDOS_ESTRUTURA = [
     GROUP BY C.id, C.nome;
     """,
 
-    "DROP VIEW IF EXISTS vw_total_vendido_por_vendedor",
+    "DROP VIEW IF EXISTS vw_total_vendido_por_vendedor;",
     """
     CREATE VIEW vw_total_vendido_por_vendedor AS
     SELECT 
@@ -169,7 +275,7 @@ SQL_COMANDOS_ESTRUTURA = [
     GROUP BY Vd.id, Vd.nome;
     """,
 
-    "DROP VIEW IF EXISTS vw_produtos_mais_vendidos",
+    "DROP VIEW IF EXISTS vw_produtos_mais_vendidos;",
     """
     CREATE VIEW vw_produtos_mais_vendidos AS
     SELECT 
@@ -180,20 +286,22 @@ SQL_COMANDOS_ESTRUTURA = [
     JOIN Venda_Produto VP ON P.id = VP.id_produto
     GROUP BY P.id, P.nome
     ORDER BY total_vendido DESC;
-    """
+    """,
 
-    #Procedimentos
+    # ================================
+    # PROCEDURES
+    # ================================
 
-    "DROP PROCEDURE IF EXISTS Reajuste",
+    "DROP PROCEDURE IF EXISTS Reajuste;",
     """
     CREATE PROCEDURE Reajuste(IN p_percentual FLOAT)
     BEGIN
         UPDATE Vendedor
         SET salario = salario + (salario * (p_percentual / 100));
-    END
-    """
+    END;
+    """, 
 
-    "DROP PROCEDURE IF EXISTS Sorteio",
+    "DROP PROCEDURE IF EXISTS Sorteio;",
     """
     CREATE PROCEDURE Sorteio()
     BEGIN
@@ -202,31 +310,27 @@ SQL_COMANDOS_ESTRUTURA = [
         DECLARE v_eh_cliente_especial INT DEFAULT 0;
         DECLARE v_valor_premio FLOAT;
 
-        -- 1. Sorteia UM cliente aleatório
         SELECT id, nome INTO v_id_cliente_sorteado, v_nome_cliente_sorteado 
         FROM Cliente 
         ORDER BY RAND() 
         LIMIT 1;
 
-        -- 2. Verifica se ele é especial
         SELECT COUNT(*) INTO v_eh_cliente_especial 
         FROM Cliente_Especial 
         WHERE id_cliente = v_id_cliente_sorteado;
 
-        -- 3. Define o prêmio
         IF v_eh_cliente_especial > 0 THEN
             SET v_valor_premio = 200.00;
         ELSE
             SET v_valor_premio = 100.00;
         END IF;
 
-        -- 4. Mostra o resultado
         SELECT v_nome_cliente_sorteado AS 'Cliente Sorteado', 
-               v_valor_premio AS 'Valor do Voucher (R$)';
-    END
-    """
+              v_valor_premio AS 'Valor do Voucher (R$)';
+    END;
+    """, 
 
-    "DROP PROCEDURE IF EXISTS Realizar_Venda",
+    "DROP PROCEDURE IF EXISTS Realizar_Venda;",
     """
     CREATE PROCEDURE Realizar_Venda(
         IN p_id_cliente INT,
@@ -239,37 +343,31 @@ SQL_COMANDOS_ESTRUTURA = [
         DECLARE v_preco_atual FLOAT;
         DECLARE v_id_nova_venda INT;
 
-        -- 1. Obtém o preço atual do produto
         SELECT valor INTO v_preco_atual FROM Produto WHERE id = p_id_produto;
 
-        -- 2. Registra a venda
         INSERT INTO Venda (data_venda, hora, endereco_destino, valor_frete, id_transportadora, id_vendedor, id_cliente)
         VALUES (CURDATE(), CURTIME(), p_endereco_entrega, 50.00, p_id_transportadora, p_id_vendedor, p_id_cliente);
 
-        -- 3. Recupera o ID da venda recém-criada
         SET v_id_nova_venda = LAST_INSERT_ID();
 
-        -- 4. Registra o item na venda (Quantidade fixa = 1)
         INSERT INTO Venda_Produto (id_venda, id_produto, quantidade, valor_unitario)
         VALUES (v_id_nova_venda, p_id_produto, 1, v_preco_atual);
 
-        -- 5. Reduz em 1 o estoque
         UPDATE Produto 
         SET quantidade_em_estoque = quantidade_em_estoque - 1
         WHERE id = p_id_produto;
-    END
-    """
+    END;
+    """, 
 
-    "DROP PROCEDURE IF EXISTS Estatisticas",
+    "DROP PROCEDURE IF EXISTS Estatisticas;",
     """
     CREATE PROCEDURE Estatisticas()
     BEGIN
-        -- 1. Produto MAIS vendido, Vendedor associado e Valor ganho
         SELECT 'MAIS VENDIDO' AS Categoria,
-               P.nome AS Produto,
-               Vd.nome AS 'Vendedor Associado',
-               SUM(VP.quantidade) AS 'Qtd Total',
-               SUM(VP.quantidade * VP.valor_unitario) AS 'Valor Ganho Total'
+              P.nome AS Produto,
+              Vd.nome AS 'Vendedor Associado',
+              SUM(VP.quantidade) AS 'Qtd Total',
+              SUM(VP.quantidade * VP.valor_unitario) AS 'Valor Ganho Total'
         FROM Venda_Produto VP
         JOIN Produto P ON VP.id_produto = P.id
         JOIN Venda V ON VP.id_venda = V.id
@@ -278,34 +376,31 @@ SQL_COMANDOS_ESTRUTURA = [
         ORDER BY SUM(VP.quantidade) DESC
         LIMIT 1;
 
-        -- 2. Mês de MAIOR e MENOR venda do produto MAIS vendido
         SELECT 'MESES (Mais Vendido)' AS Categoria,
-               MONTH(V.data_venda) AS Mes,
-               SUM(VP.quantidade) AS Qtd_no_Mes
+              MONTH(V.data_venda) AS Mes,
+              SUM(VP.quantidade) AS Qtd_no_Mes
         FROM Venda_Produto VP
         JOIN Venda V ON VP.id_venda = V.id
         WHERE VP.id_produto = (
             SELECT id_produto FROM Venda_Produto GROUP BY id_produto ORDER BY SUM(quantidade) DESC LIMIT 1
         )
         GROUP BY MONTH(V.data_venda)
-        ORDER BY Qtd_no_Mes DESC; -- O primeiro é o mês de maior venda, o último é o de menor.
+        ORDER BY Qtd_no_Mes DESC;
 
-        -- 3. Produto MENOS vendido e Valor ganho
         SELECT 'MENOS VENDIDO' AS Categoria,
-               P.nome AS Produto,
-               '-' AS 'Vendedor Associado',
-               SUM(VP.quantidade) AS 'Qtd Total',
-               SUM(VP.quantidade * VP.valor_unitario) AS 'Valor Ganho Total'
+              P.nome AS Produto,
+              '-' AS 'Vendedor Associado',
+              SUM(VP.quantidade) AS 'Qtd Total',
+              SUM(VP.quantidade * VP.valor_unitario) AS 'Valor Ganho Total'
         FROM Venda_Produto VP
         JOIN Produto P ON VP.id_produto = P.id
         GROUP BY P.id, P.nome
         ORDER BY SUM(VP.quantidade) ASC
         LIMIT 1;
 
-         -- 4. Mês de MAIOR e MENOR venda do produto MENOS vendido
         SELECT 'MESES (Menos Vendido)' AS Categoria,
-               MONTH(V.data_venda) AS Mes,
-               SUM(VP.quantidade) AS Qtd_no_Mes
+              MONTH(V.data_venda) AS Mes,
+              SUM(VP.quantidade) AS Qtd_no_Mes
         FROM Venda_Produto VP
         JOIN Venda V ON VP.id_venda = V.id
         WHERE VP.id_produto = (
@@ -313,9 +408,8 @@ SQL_COMANDOS_ESTRUTURA = [
         )
         GROUP BY MONTH(V.data_venda)
         ORDER BY Qtd_no_Mes DESC;
-    END
+    END;
     """
-    
 ]
 
 # ============================
@@ -327,7 +421,7 @@ def criar_banco():
     cursor = None
     
     try:
-        # Cria o banco
+        # 1. Cria o banco
         cnx = mysql.connector.connect(host=HOST, user=USUARIO, password=SENHA)
         cursor = cnx.cursor()
         cursor.execute(SQL_CREATE_DB)
@@ -335,22 +429,22 @@ def criar_banco():
         cursor.close()
         cnx.close()
 
-        # Conecta ao banco recém-criado
+        # 2. Conecta ao banco recém-criado
         cnx = mysql.connector.connect(host=HOST, user=USUARIO, password=SENHA, database=NOME_BANCO)
         cursor = cnx.cursor()
 
-        print(f"ℹ️ Iniciando criação de Tabelas, Funções e Views no '{NOME_BANCO}'...")
+        print(f"ℹ️ Iniciando criação de Tabelas, Funções, Triggers e Views no '{NOME_BANCO}'...")
 
         for comando_sql in SQL_COMANDOS_ESTRUTURA:
             cursor.execute(comando_sql)
 
-        print("✅ Todas as Tabelas, Funções e Views foram criadas com sucesso!")
+        print("✅ Todas as Tabelas, Funções, Triggers e Views foram criadas com sucesso!")
 
     except mysql.connector.Error as err:
         if err.errno == 1418:
             print("\n" + "="*50)
             print("ERRO DE PERMISSÃO (1418):")
-            print("O MySQL não permitiu que o Python criasse a função.")
+            print("O MySQL não permitiu que o Python criasse a função/procedimento.")
             print("Execute isto no seu MySQL Workbench (como root):")
             print("SET GLOBAL log_bin_trust_function_creators = 1;")
             print("="*50 + "\n")
