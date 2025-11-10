@@ -1,59 +1,13 @@
-from conectar import ligar
-from criar_db import Cliente 
-from criar_db import Vendedor
-import mysql.connector
-from config import HOST, USUARIO, SENHA
+# app.py
+# (Corrigido para usar db_logic.py e o padrão procedural)
 
-def conectar():
-    try:
-        con = mysql.connector.connect(
-            host=HOST,
-            user=USUARIO,
-            password=SENHA,
-            database="ecommerce_oculos_db"
-        )
-        return con
-    except mysql.connector.Error as err:
-        print(f"Erro ao conectar ao banco: {err}")
-        return None
+# Não importamos mais de 'criar_db'
+import logica_db as db  # Importa o nosso novo ficheiro de lógica
 
-def exibir_total_gasto_por_cliente(con):
-    cursor = con.cursor()
-    cursor.execute("SELECT * FROM vw_total_gasto_por_cliente")
-    resultados = cursor.fetchall()
-    print("\n TOTAL GASTO POR CLIENTE")
-    print("-" * 45)
-    for nome, total in resultados:
-        print(f"{nome:<25} | R$ {total:.2f}")
-    cursor.close()
-
-def exibir_total_vendido_por_vendedor(con):
-    cursor = con.cursor()
-    cursor.execute("SELECT * FROM vw_total_vendido_por_vendedor")
-    resultados = cursor.fetchall()
-    print("\n TOTAL VENDIDO POR VENDEDOR")
-    print("-" * 45)
-    for nome, total in resultados:
-        print(f"{nome:<25} | R$ {total:.2f}")
-    cursor.close()
-
-def exibir_produtos_mais_vendidos(con):
-    cursor = con.cursor()
-    cursor.execute("SELECT * FROM vw_produtos_mais_vendidos")
-    resultados = cursor.fetchall()
-    print("\n PRODUTOS MAIS VENDIDOS")
-    print("-" * 45)
-    for nome, qtd in resultados:
-        print(f"{nome:<25} | Quantidade vendida: {int(qtd)}")
-    cursor.close()
+# --- Submenus para Lógica ---
 
 def consultar_views():
     """Submenu para exibir as views."""
-    con = conectar()
-    if not con:
-        print("Erro ao conectar no banco de dados.")
-        return
-
     while True:
         print("\n=== CONSULTAS (VIEWS) ===")
         print("[1] Total gasto por cliente")
@@ -64,124 +18,145 @@ def consultar_views():
         opcao = input("Escolha uma opção: ")
 
         if opcao == "1":
-            exibir_total_gasto_por_cliente(con)
+            resultados = db.get_view_total_gasto()
+            print("\n TOTAL GASTO POR CLIENTE")
+            print("-" * 45)
+            if resultados:
+                for id, nome, total in resultados:
+                    print(f"ID {id} | {nome:<25} | R$ {total or 0:.2f}")
         elif opcao == "2":
-            exibir_total_vendido_por_vendedor(con)
+            resultados = db.get_view_total_vendido()
+            print("\n TOTAL VENDIDO POR VENDEDOR")
+            print("-" * 45)
+            if resultados:
+                for id, nome, total in resultados:
+                    print(f"ID {id} | {nome:<25} | R$ {total or 0:.2f}")
         elif opcao == "3":
-            exibir_produtos_mais_vendidos(con)
+            resultados = db.get_view_produtos_mais_vendidos()
+            print("\n PRODUTOS MAIS VENDIDOS")
+            print("-" * 45)
+            if resultados:
+                for id, nome, qtd in resultados:
+                    print(f"ID {id} | {nome:<25} | Quantidade: {int(qtd or 0)}")
         elif opcao == "0":
             break
         else:
             print("Opção inválida.")
-    con.close()
+        input("Pressione Enter para continuar...")
 
-def menu_cliente(id_cliente):
-    usuario = Cliente(id_cliente)
-
+def menu_cliente():
     while True:
         print("\n === MENU CLIENTE ===")
-        print("[1] Cadastrar")
-        print("[2] Login")
-        print("[3] Compras")
+        print("[1] Cadastrar (Em breve)")
+        print("[2] Login (Em breve)")
+        print("[3] Testar Função 'Calcula_idade'")
+        print("[0] Voltar")
 
         opcao = input("Escolha uma opção: ")
         if opcao == "1":
-            #lógica de cadastro
-            print("Ok")
+            print("Lógica de cadastro de cliente em breve...")
         elif opcao == "2":
-            #logica de login
-            print("ok")
+            print("Lógica de login de cliente em breve...")
         elif opcao == "3":
-            #logica de compras
-            print("ok") 
+            try:
+                id_cli = int(input("Digite o ID do cliente: "))
+                idade = db.chamar_calcula_idade(id_cli)
+                if idade is not None:
+                    print(f"✅ A idade calculada do Cliente {id_cli} é: {idade} anos.")
+                else:
+                    print(f"⚠  Cliente {id_cli} não encontrado.")
+            except ValueError:
+                print("❌ ID inválido.")
+        elif opcao == "0":
+            break
         else:
-            print("Opção inválida")    
+            print("Opção inválida")
+        input("Pressione Enter para continuar...")
 
-def menu_vendedor(id_vendedor):
-    vendedor = Vendedor(id_vendedor)
-
+def menu_vendedor():
     while True:
-        print("\n === MENU VENDEDOR ===")
-        print("[1] Login")
-        print("[2] Consulta")
-        print("[3] Adicionar produto")
+        print("\n === MENU VENDEDOR (Funcionário) ===")
+        print("[1] Realizar Venda (Chama Procedure)")
+        print("[0] Voltar")
 
-        opcao = input("Esculha uma opção:")
+        opcao = input("Escolha uma opção:")
         if opcao == "1":
-            #logica de login
-            print("ok")
-        elif opcao == "2":
-            #logica de consulta
-            print("Ok")
-        elif opcao == "3":
-            #logica de adicionar produto
-            print("ok")
+            try:
+                id_cli = int(input("ID do Cliente: "))
+                id_vend = int(input("ID do Vendedor (seu ID): "))
+                id_trans = int(input("ID da Transportadora: "))
+                end = input("Endereço de Entrega: ")
+                id_prod = int(input("ID do Produto vendido: "))
+                db.chamar_realizar_venda(id_cli, id_vend, id_trans, end, id_prod)
+            except ValueError:
+                print("❌ IDs devem ser números.")
+        elif opcao == "0":
+            break
         else:
-            print("Opção inválida")   
+            print("Opção inválida")
+        input("Pressione Enter para continuar...")
 
-def menu_gerente(id_vendedor):
-    gerente = Vendedor(id_vendedor)
-    
+def menu_gerente():
     while True:
         print("\n=== MENU GERENTE ===")
-        print("[1] Buscar")
-        print("[2] Apagar")
-        print("[3] Editar")
+        print("[1] Consultar Views (Relatórios)")
+        print("[2] Ver Estatísticas (Chama Procedure)")
+        print("[0] Voltar")
 
-        opcao = input("Esculha uma opção:")
+        opcao = input("Escolha uma opção:")
         if opcao == "1":
-            #logica de busca
-            print("ok")
+            consultar_views()
         elif opcao == "2":
-            #logica de apagar
-            print("Ok")
-        elif opcao == "3":
-            #logica de editar
-            print("ok")
+            resultados = db.chamar_estatisticas()
+            if resultados:
+                print("\n--- ESTATÍSTICAS COMPLETAS ---")
+                for i, res_bloco in enumerate(resultados):
+                    print(f"\nBloco de Estatística {i+1}:")
+                    for linha in res_bloco:
+                        print(linha)
+        elif opcao == "0":
+            break
         else:
-            print("Opção inválida")  
+            print("Opção inválida")
+        input("Pressione Enter para continuar...")
 
-def menu_adm(id_vendedor):
-    adm = Vendedor(id_vendedor)
-
+def menu_adm():
     while True:
         print("\n === MENU ADMINISTRADOR ===")
-        print("[1] Login")      
-        print("[2] Buscar")
-        print("[3] Apagar")
-        print("[4] Editar")             
-        print("[5] Adicionar")             
-        print("[6] Consultar")  
+        print("[1] Aplicar Reajuste Salarial (Procedure)")
+        print("[2] Realizar Sorteio de Voucher (Procedure)")
+        print("[3] Consultar Views (Relatórios)")
+        print("[0] Voltar")
 
         opcao = input("Escolha uma opção: ")
         if opcao == "1":
-            #logica do login
-            print("ok")
+            try:
+                perc = float(input("Digite o percentual de reajuste (ex: 10 para 10%): "))
+                db.chamar_reajuste(perc)
+            except ValueError:
+                print("❌ Valor inválido.")
         elif opcao == "2":
-            #logica buscar
-            print("ok")           
+            resultado = db.chamar_sorteio()
+            if resultado:
+                print("\n--- 🍀 RESULTADO DO SORTEIO 🍀 ---")
+                print(f"Cliente Sorteado: {resultado[0]}")
+                print(f"Valor do Voucher: R$ {resultado[1]:.2f}")
         elif opcao == "3":
-            #logica apagar 
-            print("ok")          
-        elif opcao == "4":
-            #logica editar
-            print("ok")
-        elif opcao == "5":
-            #logica adicionar
-            print("ok")
-        elif opcao == "6":
-            #logica consultar
-            print("ok")
+            consultar_views()
+        elif opcao == "0":
+            break
         else:         
             print("Opção inválida")
+        input("Pressione Enter para continuar...")
 
 def main():
     while True:
-        print("\n=== MENU ===")
-        print("[1] Cliente")
-        print("[2] Vendedor")
-        print("[3] Gerente")
-        print("[4] Administrador")
+        print("\n=== MENU PRINCIPAL ===")
+        print("[1] Sou Cliente")
+        print("[2] Sou Vendedor (Funcionário)")
+        print("[3] Sou Gerente")
+        print("[4] Sou Administrador")
+        print("[0] Sair da Aplicação")
 
         opcao = input("Escolha uma opção: ")
         if opcao == "1":
@@ -192,6 +167,11 @@ def main():
             menu_gerente()
         elif opcao == "4":           
             menu_adm()
+        elif opcao == "0":
+            print("👋 Encerrando aplicação. Até logo!")
+            break
         else:
             print("Opção inválida")           
         
+if __name__ == "__main__":
+    main()
