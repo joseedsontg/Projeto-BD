@@ -14,8 +14,6 @@ CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 # ============================
 
 SQL_FUNCTION_CALCULA_IDADE = """
-DROP FUNCTION IF EXISTS Calcula_idade;
-DELIMITER $$
 CREATE FUNCTION Calcula_idade(p_id_cliente INT)
 RETURNS INT
 DETERMINISTIC
@@ -31,13 +29,10 @@ BEGIN
     END IF;
     SET v_idade = TIMESTAMPDIFF(YEAR, v_data_nascimento, CURDATE());
     RETURN v_idade;
-END$$
-DELIMITER ;
+END
 """
 
 SQL_FUNCTION_SOMA_FRETES = """
-DROP FUNCTION IF EXISTS Soma_fretes;
-DELIMITER $$
 CREATE FUNCTION Soma_fretes(p_endereco_destino VARCHAR(100))
 RETURNS FLOAT
 DETERMINISTIC
@@ -51,13 +46,10 @@ BEGIN
         RETURN 0.0;
     END IF;
     RETURN v_valor_total_fretes;
-END$$
-DELIMITER ;
+END
 """
 
 SQL_FUNCTION_ARRECADADO = """
-DROP FUNCTION IF EXISTS Arrecadado;
-DELIMITER $$
 CREATE FUNCTION Arrecadado(p_data DATE, p_id_vendedor INT)
 RETURNS FLOAT
 DETERMINISTIC
@@ -73,8 +65,7 @@ BEGIN
         RETURN 0.0;
     END IF;
     RETURN v_total_arrecadado;
-END$$
-DELIMITER ;
+END
 """
 
 # ============================
@@ -82,8 +73,6 @@ DELIMITER ;
 # ============================
 
 SQL_TRIGGER_VENDEDOR_BONUS = """
-DROP TRIGGER IF EXISTS Calcula_Bonus_Vendedor;
-DELIMITER $$
 CREATE TRIGGER Calcula_Bonus_Vendedor
 AFTER UPDATE ON Vendedor
 FOR EACH ROW
@@ -105,23 +94,18 @@ BEGIN
         SELECT bonus_total_acumulado INTO bonus_acumulado_total
         FROM Funcionario_Especial WHERE id_vendedor = NEW.id;
         
-        -- CORREÇÃO: Concatenação movida para variável para evitar erro de sintaxe
         SET mensagem = CONCAT(
             'ALERTA DE BÔNUS: Vendedor ', NEW.id, 
             ' recebeu um bônus de R$ ', FORMAT(valor_bonus, 2), 
             '. O total de bônus salarial acumulado a custear é de R$ ', 
             FORMAT(bonus_acumulado_total, 2), '.'
         );
-
         SIGNAL SQLSTATE '01000' SET MESSAGE_TEXT = mensagem;
     END IF;
-END$$
-DELIMITER ;
+END
 """
 
 SQL_TRIGGER_CLIENTE_CASHBACK = """
-DROP TRIGGER IF EXISTS Gera_Cashback_Cliente;
-DELIMITER $$
 CREATE TRIGGER Gera_Cashback_Cliente
 AFTER UPDATE ON Cliente
 FOR EACH ROW
@@ -143,23 +127,18 @@ BEGIN
         SELECT cashback INTO cashback_acumulado_total
         FROM Cliente_Especial WHERE id_cliente = NEW.id;
 
-        -- CORREÇÃO: Concatenação movida para variável para evitar erro de sintaxe
         SET mensagem = CONCAT(
             'ALERTA DE CASHBACK: Cliente ', NEW.id, 
             ' recebeu um cashback de R$ ', FORMAT(valor_cashback, 2), 
             '. O valor total de cashback a custear é de R$ ', 
             FORMAT(cashback_acumulado_total, 2), '.'
         );
-
         SIGNAL SQLSTATE '01000' SET MESSAGE_TEXT = mensagem;
     END IF;
-END$$
-DELIMITER ;
+END
 """
 
 SQL_TRIGGER_REMOVE_CLIENTE = """
-DROP TRIGGER IF EXISTS Remove_Cliente_Cashback_Zero;
-DELIMITER $$
 CREATE TRIGGER Remove_Cliente_Cashback_Zero
 AFTER UPDATE ON Cliente_Especial
 FOR EACH ROW
@@ -168,12 +147,11 @@ BEGIN
         DELETE FROM Cliente_Especial
         WHERE id_cliente = NEW.id_cliente;
     END IF;
-END$$
-DELIMITER ;
+END
 """
 
 # ============================
-# Estrutura do Banco
+# Estrutura do Banco 
 # ============================
 
 SQL_COMANDOS_ESTRUTURA = [
@@ -236,14 +214,18 @@ SQL_COMANDOS_ESTRUTURA = [
     );
     """,
     
-    # Executa as Functions 
+    "DROP FUNCTION IF EXISTS Calcula_idade;",
     SQL_FUNCTION_CALCULA_IDADE,
+    "DROP FUNCTION IF EXISTS Soma_fretes;",
     SQL_FUNCTION_SOMA_FRETES,
+    "DROP FUNCTION IF EXISTS Arrecadado;",
     SQL_FUNCTION_ARRECADADO,
     
-    # Executa os Triggers 
+    "DROP TRIGGER IF EXISTS Calcula_Bonus_Vendedor;",
     SQL_TRIGGER_VENDEDOR_BONUS,
+    "DROP TRIGGER IF EXISTS Gera_Cashback_Cliente;",
     SQL_TRIGGER_CLIENTE_CASHBACK,
+    "DROP TRIGGER IF EXISTS Remove_Cliente_Cashback_Zero;",
     SQL_TRIGGER_REMOVE_CLIENTE,
 
     # ================================
@@ -261,7 +243,6 @@ SQL_COMANDOS_ESTRUTURA = [
     JOIN Venda_Produto VP ON V.id = VP.id_venda
     GROUP BY C.id, C.nome;
     """,
-
     "DROP VIEW IF EXISTS vw_total_vendido_por_vendedor;",
     """
     CREATE VIEW vw_total_vendido_por_vendedor AS
@@ -274,7 +255,6 @@ SQL_COMANDOS_ESTRUTURA = [
     JOIN Venda_Produto VP ON Ve.id = VP.id_venda
     GROUP BY Vd.id, Vd.nome;
     """,
-
     "DROP VIEW IF EXISTS vw_produtos_mais_vendidos;",
     """
     CREATE VIEW vw_produtos_mais_vendidos AS
@@ -291,16 +271,14 @@ SQL_COMANDOS_ESTRUTURA = [
     # ================================
     # PROCEDURES
     # ================================
-
     "DROP PROCEDURE IF EXISTS Reajuste;",
     """
     CREATE PROCEDURE Reajuste(IN p_percentual FLOAT)
     BEGIN
         UPDATE Vendedor
         SET salario = salario + (salario * (p_percentual / 100));
-    END;
+    END
     """, 
-
     "DROP PROCEDURE IF EXISTS Sorteio;",
     """
     CREATE PROCEDURE Sorteio()
@@ -327,9 +305,8 @@ SQL_COMANDOS_ESTRUTURA = [
 
         SELECT v_nome_cliente_sorteado AS 'Cliente Sorteado', 
               v_valor_premio AS 'Valor do Voucher (R$)';
-    END;
+    END
     """, 
-
     "DROP PROCEDURE IF EXISTS Realizar_Venda;",
     """
     CREATE PROCEDURE Realizar_Venda(
@@ -342,6 +319,7 @@ SQL_COMANDOS_ESTRUTURA = [
     BEGIN
         DECLARE v_preco_atual FLOAT;
         DECLARE v_id_nova_venda INT;
+        DECLARE v_total_venda FLOAT;
 
         SELECT valor INTO v_preco_atual FROM Produto WHERE id = p_id_produto;
 
@@ -352,13 +330,23 @@ SQL_COMANDOS_ESTRUTURA = [
 
         INSERT INTO Venda_Produto (id_venda, id_produto, quantidade, valor_unitario)
         VALUES (v_id_nova_venda, p_id_produto, 1, v_preco_atual);
+        
+        SET v_total_venda = 1 * v_preco_atual;
 
         UPDATE Produto 
         SET quantidade_em_estoque = quantidade_em_estoque - 1
         WHERE id = p_id_produto;
-    END;
+        
+        UPDATE Cliente 
+        SET valor_gasto = valor_gasto + v_total_venda 
+        WHERE id = p_id_cliente;
+        
+        UPDATE Vendedor
+        SET valor_vendas = valor_vendas + v_total_venda
+        WHERE id = p_id_vendedor;
+        
+    END
     """, 
-
     "DROP PROCEDURE IF EXISTS Estatisticas;",
     """
     CREATE PROCEDURE Estatisticas()
@@ -408,8 +396,25 @@ SQL_COMANDOS_ESTRUTURA = [
         )
         GROUP BY MONTH(V.data_venda)
         ORDER BY Qtd_no_Mes DESC;
-    END;
-    """
+    END
+    """,
+    
+    # ================================
+    # USUÁRIOS
+    # ================================
+    "DROP USER IF EXISTS 'admin_db'@'localhost';",
+    "CREATE USER 'admin_db'@'localhost' IDENTIFIED BY 'admin123';",
+    "GRANT ALL PRIVILEGES ON ecommerce_oculos_db.* TO 'admin_db'@'localhost' WITH GRANT OPTION;",
+    "DROP USER IF EXISTS 'gerente_db'@'localhost';",
+    "CREATE USER 'gerente_db'@'localhost' IDENTIFIED BY 'gerente123';",
+    "GRANT SELECT, UPDATE, DELETE ON ecommerce_oculos_db.* TO 'gerente_db'@'localhost';",
+    "DROP USER IF EXISTS 'func_db'@'localhost';",
+    "CREATE USER 'func_db'@'localhost' IDENTIFIED BY 'func123';",
+    "GRANT SELECT (id, nome, valor, quantidade_em_estoque) ON ecommerce_oculos_db.Produto TO 'func_db'@'localhost';",
+    "GRANT SELECT (id, nome) ON ecommerce_oculos_db.Cliente TO 'func_db'@'localhost';",
+    "GRANT SELECT, INSERT ON ecommerce_oculos_db.Venda TO 'func_db'@'localhost';",
+    "GRANT SELECT, INSERT ON ecommerce_oculos_db.Venda_Produto TO 'func_db'@'localhost';",
+    "GRANT EXECUTE ON PROCEDURE ecommerce_oculos_db.Realizar_Venda TO 'func_db'@'localhost';"
 ]
 
 # ============================
@@ -421,7 +426,6 @@ def criar_banco():
     cursor = None
     
     try:
-        # 1. Cria o banco
         cnx = mysql.connector.connect(host=HOST, user=USUARIO, password=SENHA)
         cursor = cnx.cursor()
         cursor.execute(SQL_CREATE_DB)
@@ -429,16 +433,31 @@ def criar_banco():
         cursor.close()
         cnx.close()
 
-        # 2. Conecta ao banco recém-criado
         cnx = mysql.connector.connect(host=HOST, user=USUARIO, password=SENHA, database=NOME_BANCO)
         cursor = cnx.cursor()
 
-        print(f"ℹ️ Iniciando criação de Tabelas, Funções, Triggers e Views no '{NOME_BANCO}'...")
+        print(f"ℹ  Iniciando criação de Tabelas, Funções, Triggers e Views no '{NOME_BANCO}'...")
 
         for comando_sql in SQL_COMANDOS_ESTRUTURA:
-            cursor.execute(comando_sql)
+            try:
+                cursor.execute(comando_sql)
+            except mysql.connector.Error as err:
+                if "DROP" in comando_sql and (
+                    err.errno == 1051 or  
+                    err.errno == 1305 or  
+                    err.errno == 1091 or  
+                    err.errno == 1065 or 
+                    err.errno == 1918     
+                ):
+                    pass 
+                else:
+                    print(f"\n--- ERRO AO EXECUTAR ---")
+                    print(f"Comando: {comando_sql[:150]}...")
+                    print(f"Erro: {err}")
+                    print("-------------------------")
+                    raise err 
 
-        print("✅ Todas as Tabelas, Funções, Triggers e Views foram criadas com sucesso!")
+        print("Todas as estruturas foram criadas com sucesso!")
 
     except mysql.connector.Error as err:
         if err.errno == 1418:

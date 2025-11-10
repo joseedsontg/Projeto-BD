@@ -1,4 +1,3 @@
-# 2_popular_banco.py (Revisão Final)
 import mysql.connector
 from mysql.connector import errorcode
 from config import HOST, USUARIO, SENHA
@@ -7,7 +6,6 @@ import random
 
 NOME_BANCO = "ecommerce_oculos_db"
 
-# Inicializa o Faker para gerar dados em português
 fake = Faker('pt_BR')
 
 def inserir_dados():
@@ -22,16 +20,15 @@ def inserir_dados():
         )
         cursor = cnx.cursor()
 
-        print("Conectado! Iniciando a inserção de dados (Esquema Final)...")
+        print("Conectado! Iniciando a inserção de dados...")
 
-        # --- 1. Inserir Vendedores (5) ---
         vendedores = []
         for _ in range(5):
             vendedores.append((
                 fake.name(),
-                fake.sentence(nb_words=4), # Causa social
-                random.uniform(3.5, 5.0), # Nota media
-                random.uniform(1500.0, 5000.0), # Salário
+                fake.sentence(nb_words=4), 
+                random.uniform(3.5, 5.0), 
+                random.uniform(1500.0, 5000.0),
             ))
             
         sql_vendedores = """
@@ -41,7 +38,6 @@ def inserir_dados():
         cursor.executemany(sql_vendedores, vendedores)
         print(f"{cursor.rowcount} vendedores inseridos.")
 
-        # --- 2. Inserir Transportadoras (3) ---
         transportadoras = [
             ('RápidoLog', 'São Paulo'),
             ('VelozEntregas', 'Rio de Janeiro'),
@@ -51,7 +47,6 @@ def inserir_dados():
         cursor.executemany(sql_transportadoras, transportadoras)
         print(f"{cursor.rowcount} transportadoras inseridas.")
 
-        # --- 3. Inserir Clientes (100) ---
         clientes = []
         for _ in range(100):
             clientes.append((
@@ -65,15 +60,14 @@ def inserir_dados():
         cursor.executemany(sql_clientes, clientes)
         print(f"{cursor.rowcount} clientes inseridos.")
 
-        # --- 4. Inserir Produtos (20) ---
         produtos = []
         for _ in range(20):
             produtos.append((
                 f"Óculos {fake.word().capitalize()} {random.choice(['Sport', 'Classic', 'Modern'])}",
-                random.randint(10, 100), # Estoque
-                round(random.uniform(99.90, 799.90), 2), # Valor
-                fake.sentence(nb_words=10), # Descrição
-                random.randint(1, 5) # id_vendedor (assume IDs 1-5)
+                random.randint(10, 100), 
+                round(random.uniform(99.90, 799.90), 2), 
+                fake.sentence(nb_words=10), 
+                random.randint(1, 5) 
             ))
         sql_produtos = """
         INSERT INTO Produto (nome, quantidade_em_estoque, valor, descricao, id_vendedor)
@@ -83,7 +77,7 @@ def inserir_dados():
         print(f"{cursor.rowcount} produtos inseridos.")
 
         cnx.commit()
-        print("\n(Revisão Final) Todos os dados iniciais foram inseridos com sucesso!")
+        print("\n Todos os dados iniciais foram inseridos com sucesso!")
 
     except mysql.connector.Error as err:
         if err.errno == errorcode.ER_ACCESS_DENIED_ERROR:

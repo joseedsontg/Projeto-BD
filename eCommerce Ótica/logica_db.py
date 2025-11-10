@@ -1,11 +1,5 @@
-# db_logic.py
-# Este ficheiro contém toda a lógica de interação com o banco.
-
 from conectar import conectar
 import mysql.connector
-
-# --- Funções que chamam as VIEWS ---
-# (Movidas do teu app.py para cá)
 
 def get_view_total_gasto():
     con = conectar()
@@ -37,8 +31,6 @@ def get_view_produtos_mais_vendidos():
     con.close()
     return resultados
 
-# --- Funções que chamam as FUNCTIONS SQL ---
-
 def chamar_calcula_idade(id_cliente):
     con = conectar()
     if not con: return None
@@ -56,7 +48,39 @@ def chamar_calcula_idade(id_cliente):
         cursor.close()
         con.close()
 
-# --- Funções que chamam as PROCEDURES SQL ---
+def chamar_soma_fretes(destino):
+    con = conectar()
+    if not con: return None
+    cursor = con.cursor()
+    try:
+        cursor.execute("SELECT Soma_fretes(%s)", (destino,))
+        resultado = cursor.fetchone()
+        if resultado:
+            return resultado[0]
+        return 0.0
+    except mysql.connector.Error as err:
+        print(f"Erro ao chamar função: {err}")
+        return None
+    finally:
+        cursor.close()
+        con.close()
+
+def chamar_arrecadado(data, id_vendedor):
+    con = conectar()
+    if not con: return None
+    cursor = con.cursor()
+    try:
+        cursor.execute("SELECT Arrecadado(%s, %s)", (data, id_vendedor))
+        resultado = cursor.fetchone()
+        if resultado:
+            return resultado[0]
+        return 0.0
+    except mysql.connector.Error as err:
+        print(f"Erro ao chamar função: {err}")
+        return None
+    finally:
+        cursor.close()
+        con.close()
 
 def chamar_reajuste(percentual):
     con = conectar()
@@ -64,8 +88,8 @@ def chamar_reajuste(percentual):
     cursor = con.cursor()
     try:
         cursor.callproc('Reajuste', (percentual,))
-        con.commit() # Reajuste altera dados, precisa de commit
-        print(f"✅ Reajuste de {percentual}% aplicado a todos os Vendedores.")
+        con.commit() 
+        print(f"Reajuste de {percentual}% aplicado a todos os Vendedores.")
     except mysql.connector.Error as err:
         print(f"Erro ao chamar procedure: {err}")
     finally:
@@ -77,11 +101,9 @@ def chamar_sorteio():
     if not con: return
     cursor = con.cursor()
     try:
-        # callproc retorna um iterador para os resultados
         cursor.callproc('Sorteio')
-        # Itera sobre os resultados
         for result in cursor.stored_results():
-            return result.fetchone() # Retorna o (Nome, Premio)
+            return result.fetchone() 
     except mysql.connector.Error as err:
         print(f"Erro ao chamar procedure: {err}")
     finally:
@@ -94,8 +116,9 @@ def chamar_realizar_venda(id_cli, id_vend, id_trans, end, id_prod):
     cursor = con.cursor()
     try:
         cursor.callproc('Realizar_Venda', (id_cli, id_vend, id_trans, end, id_prod))
-        con.commit() # Venda altera dados, precisa de commit
-        print(f"✅ Venda para o Cliente {id_cli} registrada com sucesso!")
+        con.commit() 
+        print(f"Venda para o Cliente {id_cli} registrada com sucesso!")
+        print("ℹ  Triggers de bônus e cashback podem ter sido disparados.")
     except mysql.connector.Error as err:
         print(f"Erro ao chamar procedure: {err}")
     finally:
@@ -108,14 +131,45 @@ def chamar_estatisticas():
     cursor = con.cursor()
     try:
         cursor.callproc('Estatisticas')
-        # A procedure Estatisticas retorna 4 resultados (SELECTs)
-        # Temos que iterar por todos eles
         resultados = []
         for result in cursor.stored_results():
             resultados.append(result.fetchall())
         return resultados
     except mysql.connector.Error as err:
         print(f"Erro ao chamar procedure: {err}")
+    finally:
+        cursor.close()
+        con.close()
+
+def cadastrar_cliente(nome, sexo, data_nasc):
+    con = conectar()
+    if not con: return
+    cursor = con.cursor()
+    try:
+        sql = "INSERT INTO Cliente (nome, sexo, data_de_nascimento) VALUES (%s, %s, %s)"
+        cursor.execute(sql, (nome, sexo, data_nasc))
+        con.commit()
+        print(f"Cliente '{nome}' cadastrado com sucesso!")
+    except mysql.connector.Error as err:
+        print(f"Erro ao cadastrar cliente: {err}")
+    finally:
+        cursor.close()
+        con.close()
+
+def cadastrar_produto(nome, estoque, valor, desc, id_vend):
+    con = conectar()
+    if not con: return
+    cursor = con.cursor()
+    try:
+        sql = """
+        INSERT INTO Produto (nome, quantidade_em_estoque, valor, descricao, id_vendedor)
+        VALUES (%s, %s, %s, %s, %s)
+        """
+        cursor.execute(sql, (nome, estoque, valor, desc, id_vend))
+        con.commit()
+        print(f"Produto '{nome}' cadastrado com sucesso!")
+    except mysql.connector.Error as err:
+        print(f"Erro ao cadastrar produto: {err}")
     finally:
         cursor.close()
         con.close()

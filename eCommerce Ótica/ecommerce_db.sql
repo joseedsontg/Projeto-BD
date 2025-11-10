@@ -49,15 +49,12 @@ CREATE TABLE Produto (
   FOREIGN KEY (id_vendedor) REFERENCES Vendedor(id)
 );
 
-/* Corrigido: Adicionadas as colunas de 'Transporte_Venda' aqui.
-   Agora a Venda sabe o seu destino e frete.
-*/
 CREATE TABLE Venda (
   id INT AUTO_INCREMENT PRIMARY KEY,
   data_venda DATE NOT NULL,
   hora TIME NOT NULL,
-  endereco_destino VARCHAR(100) NOT NULL, /* <-- Movido para cá */
-  valor_frete FLOAT NOT NULL,             /* <-- Movido para cá */
+  endereco_destino VARCHAR(100) NOT NULL, 
+  valor_frete FLOAT NOT NULL,             
   id_transportadora INT,
   id_vendedor INT,
   id_cliente INT,
@@ -65,10 +62,6 @@ CREATE TABLE Venda (
   FOREIGN KEY (id_vendedor) REFERENCES Vendedor(id),
   FOREIGN KEY (id_cliente) REFERENCES Cliente(id)
 );
-
-/* Removido: Tabela 'Transporte_Venda' (redundante).
-   As suas informações estão agora em 'Venda'.
-*/
 
 CREATE TABLE Venda_Produto (
   id_venda INT,
@@ -80,7 +73,7 @@ CREATE TABLE Venda_Produto (
   FOREIGN KEY (id_produto) REFERENCES Produto(id)
 );
 
--- Functions
+-- FUNCTIONS
 
 CREATE FUNCTION `Calcula_idade`(p_id_cliente INT)(
 RETURNS INT
@@ -105,7 +98,6 @@ DETERMINISTIC
 READS SQL DATA
 BEGIN
     DECLARE v_valor_total_fretes FLOAT DEFAULT 0.0;
-    -- CORREÇÃO: Busca na tabela 'Venda'
     SELECT SUM(valor_frete) INTO v_valor_total_fretes
     FROM Venda 
     WHERE endereco_destino = p_endereco_destino;
@@ -134,7 +126,6 @@ END);
 
 -- TRIGGERS
 
--- Trigger para calcular o bônus do vendedor 
 DELIMITER $$
 
 CREATE TRIGGER Calcula_Bonus_Vendedor
@@ -168,7 +159,6 @@ END$$
 
 DELIMITER ;
 
--- Trigger para adicionar o cliente na tabela de clientes especiais e adicionar 2% no valor de cashback
 DELIMITER $$
 
 CREATE TRIGGER Gera_Cashback_Cliente
@@ -202,7 +192,6 @@ END$$
 
 DELIMITER ;
 
-  -- Trigger para remover o cliente da tabela de clientes especiais caso o valor do cashback for zero
 DELIMITER $$
 
 CREATE TRIGGER Remove_Cliente_Cashback_Zero
@@ -222,7 +211,6 @@ DELIMITER ;
 
 -- VIEWS
 
--- 1 View: Total gasto por cliente
 CREATE OR REPLACE VIEW vw_total_gasto_por_cliente AS
 SELECT 
     C.id AS id_cliente,
@@ -233,7 +221,6 @@ JOIN Venda V ON C.id = V.id_cliente
 JOIN Venda_Produto VP ON V.id = VP.id_venda
 GROUP BY C.id, C.nome;
 
--- 2 View: Total vendido por vendedor
 CREATE OR REPLACE VIEW vw_total_vendido_por_vendedor AS
 SELECT 
     Vd.id AS id_vendedor,
@@ -244,7 +231,6 @@ JOIN Venda Ve ON Vd.id = Ve.id_vendedor
 JOIN Venda_Produto VP ON Ve.id = VP.id_venda
 GROUP BY Vd.id, Vd.nome;
 
--- 3 View: Produtos mais vendidos
 CREATE OR REPLACE VIEW vw_produtos_mais_vendidos AS
 SELECT 
     P.id AS id_produto,
