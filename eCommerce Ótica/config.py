@@ -1,4 +1,4 @@
 HOST = "localhost"
 USUARIO = "root"
-SENHA = "bebel1901"
+SENHA = ""
 NOME_BANCO = "ecommerce_oculos_db"
